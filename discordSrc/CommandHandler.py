@@ -77,7 +77,7 @@ class CommandHandler:
 
         # Error check
         if not await verifyIsJailmod(interaction):
-            await interaction.response.send_message("You do not have permission to use this command!", ephemeral=True)
+            pass
         elif member.bot:
             await interaction.response.send_message("Cannot give community service to a bot!", ephemeral=True)
         elif not bailiff:
@@ -94,7 +94,6 @@ class CommandHandler:
 
         # Error check
         if not await verifyIsJailmod(interaction):
-            await interaction.response.send_message("You do not have permission to use this command!", ephemeral=True)
             return
         elif not interaction.channel or not isinstance(interaction.channel, (discord.TextChannel, discord.Thread)):
             await interaction.response.send_message("Something went wrong.")
@@ -117,7 +116,6 @@ class CommandHandler:
 
         # Error check
         if not await verifyIsJailmod(interaction):
-            await interaction.response.send_message("You do not have permission to use this command!", ephemeral=True)
             return
 
         userID = member.id

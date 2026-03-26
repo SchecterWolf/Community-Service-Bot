@@ -59,8 +59,7 @@ class DiscordBailiff(Bailiff):
 
         # Re-assign the roles
         try:
-            # TODO SCH
-            #await member.edit(roles=[self.commsRole])
+            await member.edit(roles=[self.commsRole])
             pass
         except discord.Forbidden:
             return Result(errorStr=f"User \"{name}\" is too powerfull, I cannot change their roles.")
@@ -98,8 +97,7 @@ class DiscordBailiff(Bailiff):
         # Assign the user all of their former roles
         try:
             DiscordBailiff.__LOGGER.log(LogLevel.LEVEL_DEBUG, f"Assigning user \"{name}\"({inmate.userid}) their former roles: {userRoles}")
-            # TODO SCH
-            #await member.edit(roles=userRoles)
+            await member.edit(roles=userRoles)
             pass
         except:
             pass
