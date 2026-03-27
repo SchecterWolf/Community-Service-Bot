@@ -7,6 +7,7 @@ Discord bot that sends naughty users to community service.
 ## 📚 Table of Contents
 - [About the Bot](#about-the-bot)
 - [Community Service Games](#community-service-games)
+- [How to Use the Bot](#how-to-use-the-bot)
 - [How to Install](#how-to-install)
 - [Configuration Options](#configuration-options)
 - [How to Run](#how-to-run)
@@ -45,6 +46,41 @@ When a moderator assigns community service, they specify a number of **rounds**.
 
 - **Simon Says**  
   The user must click the correct button color matching what Simon says, for **the specified number of rounds**.
+
+---
+
+## 🤖 How to Use the Bot
+
+Once the bot is installed and configured, all interactions are performed using **Discord slash commands** and context actions.
+
+### Slash Commands
+
+- **/give_comms**  
+  Assigns community service to a user.  
+  - Accepts a server member as input  
+  - Opens a modal where the moderator selects:
+    - Game type  
+    - Number of rounds  
+    - Reason for community service  
+
+- **/echo**  
+  The bot repeats any provided message.  
+  Useful for moderators who want to **warn users anonymously**.
+
+- **/help**  
+  Available to users currently serving community service.  
+  Provides assistance related to their current game/task.
+
+---
+
+### Context Menu Action
+
+- **Move Message**  
+  - Right-click a message in Discord  
+  - Select **"Move Message"**  
+  - Choose a destination channel  
+
+This allows moderators to quickly relocate messages without copying or re-sending them manually.
 
 ---
 
