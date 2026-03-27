@@ -6,6 +6,7 @@ Discord bot that sends naughty users to community service.
 
 ## 📚 Table of Contents
 - [About the Bot](#about-the-bot)
+- [Community Service Games](#community-service-games)
 - [How to Install](#how-to-install)
 - [Configuration Options](#configuration-options)
 - [How to Run](#how-to-run)
@@ -24,6 +25,26 @@ When a user is placed into community service:
 This makes it:
 - ✅ Useful for handling legitimately problematic users  
 - 🎭 Perfect for lighthearted trolling and engagement  
+
+---
+
+## 🎮 Community Service Games
+
+When a moderator assigns community service, they specify a number of **rounds**. Each game uses this value differently as described below.
+
+### Supported Games
+
+- **Counting**  
+  The user must count from **0 up to the specified number of rounds**, sending one number per message.
+
+- **Captcha**  
+  The user must correctly solve **a number of captcha images equal to the rounds value**.
+
+- **Math**  
+  The user must solve **a number of simple math problems equal to the rounds value**.
+
+- **Simon Says**  
+  The user must click the correct button color matching what Simon says, for **the specified number of rounds**.
 
 ---
 
@@ -191,4 +212,3 @@ sudo systemctl status community-service-bot
 ## 🎯 Enjoy!
 
 Turn punishment into participation — or just have some fun 😈
-
