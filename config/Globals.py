@@ -21,4 +21,5 @@ class GLOBALVARS:
     FILE_TOKEN = DIR_CONFIG + "/token.txt"
 
     CONFIG_SLASH_INIT = "slash_init"
+    CONFIG_HASH = "bot_hash"
 

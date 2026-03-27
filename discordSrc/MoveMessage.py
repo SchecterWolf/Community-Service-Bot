@@ -8,6 +8,8 @@ __email__ = "--"
 
 import discord
 
+from .Decorators import verifyIsJailmod
+
 from config.ClassLogger import ClassLogger, LogLevel
 
 class MoveMessage(discord.app_commands.ContextMenu):
@@ -23,6 +25,8 @@ class MoveMessage(discord.app_commands.ContextMenu):
 
     async def callback(self, interaction: discord.Interaction, message: discord.Message):
         MoveMessage.__LOGGER.log(LogLevel.LEVEL_DEBUG, f"Move message command invoked by user \"{interaction.user.display_name}\"")
+        if not await verifyIsJailmod(interaction):
+            return
 
         try:
             sourceChannel = interaction.channel
