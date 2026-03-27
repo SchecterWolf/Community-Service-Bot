@@ -6,6 +6,8 @@ Discord bot that sends naughty users to community service.
 
 ## 📚 Table of Contents
 - [About the Bot](#about-the-bot)
+- [Community Service Games](#community-service-games)
+- [How to Use the Bot](#how-to-use-the-bot)
 - [How to Install](#how-to-install)
 - [Configuration Options](#configuration-options)
 - [How to Run](#how-to-run)
@@ -24,6 +26,61 @@ When a user is placed into community service:
 This makes it:
 - ✅ Useful for handling legitimately problematic users  
 - 🎭 Perfect for lighthearted trolling and engagement  
+
+---
+
+## 🎮 Community Service Games
+
+When a moderator assigns community service, they specify a number of **rounds**. Each game uses this value differently as described below.
+
+### Supported Games
+
+- **Counting**  
+  The user must count from **0 up to the specified number of rounds**, sending one number per message.
+
+- **Captcha**  
+  The user must correctly solve **a number of captcha images equal to the rounds value**.
+
+- **Math**  
+  The user must solve **a number of simple math problems equal to the rounds value**.
+
+- **Simon Says**  
+  The user must click the correct button color matching what Simon says, for **the specified number of rounds**.
+
+---
+
+## 🤖 How to Use the Bot
+
+Once the bot is installed and configured, all interactions are performed using **Discord slash commands** and context actions.
+
+### Slash Commands
+
+- **/give_comms**  
+  Assigns community service to a user.  
+  - Accepts a server member as input  
+  - Opens a modal where the moderator selects:
+    - Game type  
+    - Number of rounds  
+    - Reason for community service  
+
+- **/echo**  
+  The bot repeats any provided message.  
+  Useful for moderators who want to **warn users anonymously**.
+
+- **/help**  
+  Available to users currently serving community service.  
+  Provides assistance related to their current game/task.
+
+---
+
+### Context Menu Action
+
+- **Move Message**  
+  - Right-click a message in Discord  
+  - Select **"Move Message"**  
+  - Choose a destination channel  
+
+This allows moderators to quickly relocate messages without copying or re-sending them manually.
 
 ---
 
@@ -191,4 +248,3 @@ sudo systemctl status community-service-bot
 ## 🎯 Enjoy!
 
 Turn punishment into participation — or just have some fun 😈
-
