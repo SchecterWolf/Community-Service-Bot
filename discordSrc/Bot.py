@@ -19,6 +19,7 @@ from config.Globals import GLOBALVARS
 
 from core.Community import Community
 from core.DB import DB
+from core.Version import Version
 
 from discord.client import Client
 
@@ -49,6 +50,7 @@ class Bot(Client):
         self.moveMessageHandler = MoveMessage(self)
         self.initialized = True
         self.commsChannels: List[int] = []
+        self.printVersion = False
 
     def runBot(self):
         token = ""
@@ -77,12 +79,22 @@ class Bot(Client):
 
     async def on_ready(self):
         Bot.__LOGGER.log(LogLevel.LEVEL_INFO, f"Discord bot logged in as {self.user}")
+
+        db = DB(0)
+        version = Version()
+        if db.getConfigAttr(GLOBALVARS.CONFIG_HASH, str, "") != version.getHash():
+            db.setConfigAttr(GLOBALVARS.CONFIG_HASH, version.getHash())
+            self.printVersion = True
+
         for guild in self.guilds:
             await self.on_guild_join(guild)
+
+        self.printVersion = False
 
     async def on_guild_join(self, guild: discord.Guild):
         Bot.__LOGGER.log(LogLevel.LEVEL_INFO, f"Initializing guild: {guild.name}")
 
+        bailiff = None
         commsChannelID = Config().getConfig(guild.id, 'CommunityServiceChannel', 0)
         commsChannel = guild.get_channel(commsChannelID)
 
@@ -103,6 +115,11 @@ class Bot(Client):
                 Bot.__LOGGER.log(LogLevel.LEVEL_INFO, f"Bot recovery, releasing all inmates in the \"{guild.name}\" server...")
             for inmate in inmates:
                 await bailiff.releaseInmate(inmate, str(inmate.userid))
+
+        # Print bot version if it changed
+        version = Version()
+        if bailiff and self.printVersion:
+            await bailiff.channelCommunityService.send(f"Bot restarted\n{version.getFullVersion()}")
 
     async def on_disconnect(self):
         Bot.__LOGGER.log(LogLevel.LEVEL_CRIT, "The community service bot has been disconnected.")
