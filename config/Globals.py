@@ -19,7 +19,9 @@ class GLOBALVARS:
     FILE_CONFIG_GENERAL = DIR_CONFIG + "/config.json"
     FILE_DB = DIR_DATA + "/data.sqlite"
     FILE_TOKEN = DIR_CONFIG + "/token.txt"
+    FILE_OPENAI_TOKEN = DIR_CONFIG + "/openai.txt"
 
-    CONFIG_SLASH_INIT = "slash_init"
     CONFIG_HASH = "bot_hash"
+    CONFIG_PERCY = "percy"
+    CONFIG_SLASH_INIT = "slash_init"
 

@@ -209,5 +209,5 @@ __marimo__/
 *.swp
 log.txt
 config/config.json
-config/token.txt
+config/*.txt
 resources/*

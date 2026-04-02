@@ -1,4 +1,5 @@
+captcha
 discord
+openai
 pytest
 pytest-asyncio
-captcha

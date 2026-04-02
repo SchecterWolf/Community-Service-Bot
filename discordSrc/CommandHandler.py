@@ -9,6 +9,7 @@ __email__ = "--"
 import discord
 
 from .CommsPropertiesModal import CommsPropertiesModal
+from .ICommand import ICommand
 
 from config.ClassLogger import ClassLogger, LogLevel
 
@@ -20,16 +21,15 @@ from discord.app_commands.commands import Command
 from discord.app_commands.errors import AppCommandError
 
 from discordSrc.Decorators import verifyIsJailmod
-from discordSrc.DiscordBailiff import DiscordBailiff
-from discordSrc.GuildStore import GuildStore
 
-from typing import List, Optional
+from typing import List
 
-class CommandHandler:
+class CommandHandler(ICommand):
     __LOGGER = ClassLogger(__name__)
 
     def __init__(self):
-        self.bailiff: Optional[DiscordBailiff] = None
+        super().__init__()
+
         self.listCommands: List[Command]= [
             Command(
                 name="give_comms",
@@ -73,7 +73,7 @@ class CommandHandler:
     @discord.app_commands.describe(member="User to send to comms")
     async def giveComms(self, interaction: Interaction, member: Member):
         CommandHandler.__LOGGER.log(LogLevel.LEVEL_INFO, f"\"{interaction.user.display_name}\" invoked the give_comms command.")
-        bailiff = self.__getBailiff(interaction.guild_id or 0)
+        bailiff = self._getBailiff(interaction.guild_id or 0)
 
         # Error check
         if not await verifyIsJailmod(interaction):
@@ -137,9 +137,4 @@ class CommandHandler:
             await interaction.response.send_message("You do not have any community service.", ephemeral=True)
         else:
             await interaction.response.send_message(game.getHelpInfo(), ephemeral=True)
-
-    def __getBailiff(self, serverID: int) -> Optional[DiscordBailiff]:
-        if not self.bailiff:
-            self.bailiff = GuildStore().getBailiff(serverID)
-        return self.bailiff
 

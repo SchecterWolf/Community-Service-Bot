@@ -10,7 +10,9 @@ import discord
 
 from .DiscordBailiff import DiscordBailiff
 from .CommandHandler import CommandHandler
+from .CommandPercy import CommandPercy
 from .GuildStore import GuildStore
+from .ICommand import ICommand
 from .MoveMessage import MoveMessage
 
 from config.ClassLogger import ClassLogger, LogLevel
@@ -46,17 +48,20 @@ class Bot(Client):
         intents.reactions = True
         super().__init__(intents=intents)
 
-        self.commandHandler = CommandHandler()
-        self.moveMessageHandler = MoveMessage(self)
         self.initialized = True
         self.commsChannels: List[int] = []
         self.printVersion = False
+        self.commands: List[ICommand] = [
+            CommandHandler(),
+            MoveMessage(self),
+            CommandPercy(),
+        ]
 
     def runBot(self):
         token = ""
         with open(f"{GLOBALVARS.FILE_TOKEN}") as file:
             token = file.readline()
-        self.run(token, root_logger=True) # Blocks
+        self.run(token) # Blocks
 
     async def stopBot(self):
         Bot.__LOGGER.log(LogLevel.LEVEL_CRIT, "Shutting down the community service bot...")
@@ -66,8 +71,12 @@ class Bot(Client):
         db = DB(0)
         self.tree = discord.app_commands.CommandTree(self)
 
-        self.commandHandler.setupCommands(self.tree)
-        self.moveMessageHandler.setupCommands(self.tree)
+        # Register the bot commands
+        for command in self.commands:
+            command.setupCommands(self.tree)
+
+        # Sync the bot commands, but only needs to do so once for the lifespan of the bot,
+        # or if the bot adds new commands
         if not db.getConfigAttr(GLOBALVARS.CONFIG_SLASH_INIT, int, 0):
             Bot.__LOGGER.log(LogLevel.LEVEL_WARN, f">>>>>>Syncing slash commands!")
             try:
