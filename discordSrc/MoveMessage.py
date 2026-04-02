@@ -9,10 +9,11 @@ __email__ = "--"
 import discord
 
 from .Decorators import verifyIsJailmod
+from .ICommand import ICommand
 
 from config.ClassLogger import ClassLogger, LogLevel
 
-class MoveMessage(discord.app_commands.ContextMenu):
+class MoveMessage(discord.app_commands.ContextMenu, ICommand):
     __LOGGER = ClassLogger(__name__)
 
     def __init__(self, bot: discord.Client):
