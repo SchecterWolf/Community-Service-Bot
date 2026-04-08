@@ -40,7 +40,7 @@ class ServiceGameCaptcha(ICommsGame):
         ret = Result()
 
         if self.captchaText != userInput:
-            ret.errorStr = "\"{userInput}\" is not correct!"
+            ret.errorStr = f"\"{userInput}\" is not correct!"
             await self.bailiff.speakToInmate(ret.errorStr)
             await self.__sendNewCaptcha()
         else:

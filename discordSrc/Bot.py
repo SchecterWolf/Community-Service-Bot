@@ -9,6 +9,7 @@ __email__ = "--"
 import discord
 
 from .DiscordBailiff import DiscordBailiff
+from .CommandGif import CommandGif
 from .CommandHandler import CommandHandler
 from .CommandPercy import CommandPercy
 from .GuildStore import GuildStore
@@ -55,6 +56,7 @@ class Bot(Client):
             CommandHandler(),
             MoveMessage(self),
             CommandPercy(),
+            CommandGif(),
         ]
 
     def runBot(self):

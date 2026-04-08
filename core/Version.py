@@ -12,7 +12,7 @@ from pathlib import Path
 from config.ClassLogger import ClassLogger, LogLevel
 from config.Globals import GLOBALVARS
 
-_VERSION = "0.1.1"
+_VERSION = "0.3.0"
 
 class Version:
     __LOGGER = ClassLogger(__name__)
