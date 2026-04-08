@@ -12,6 +12,7 @@ from .CommsPropertiesModal import CommsPropertiesModal
 from .ICommand import ICommand
 
 from config.ClassLogger import ClassLogger, LogLevel
+from config.Config import Config
 
 from core.Community import Community
 
@@ -113,10 +114,12 @@ class CommandHandler(ICommand):
     @discord.app_commands.describe(member="User to release")
     async def release(self, interaction: Interaction, member: Member):
         CommandHandler.__LOGGER.log(LogLevel.LEVEL_INFO, f"\"{interaction.user.display_name}\" invoked the release command.")
+        overrides = Config().getConfig(interaction.guild_id or 0, "Override", [])
 
         # Error check
-        if not await verifyIsJailmod(interaction):
-            return
+        if not any(interaction.user.id == o for o in overrides):
+            if not await verifyIsJailmod(interaction):
+                return
 
         userID = member.id
         game = Community().getServiceGame(interaction.guild_id or 0, userID)
