@@ -72,14 +72,19 @@ class CommandGif(ICommand):
 
         CommandGif.__LOGGING.log(LogLevel.LEVEL_DEBUG, f"Make GIF command called by user {interaction.user.display_name}")
 
+        info = await asyncio.to_thread(self.__extractVideoInfo, url)
+        if info.get("is_live") or info.get("live_status") == "is_live":
+            await interaction.response.send_message(f"\U0000274C You must wait for the livestream to end in order to use this command (because youtube is weird like that)!")
+            return
+
         await interaction.response.defer(thinking=True)
         filename = interaction.user.name + ''.join(random.choices(string.digits, k=8)) + f".{'gif' if makeGif else 'mp4'}"
 
         try:
             if self.__isClip(url):
-                gifFile = await self.__makeFromClip(makeGif, url, filename)
+                gifFile = await self.__makeFromClip(makeGif, info, filename)
             else:
-                gifFile = await self.__makeFromVid(makeGif, url, timestamp, duration, filename)
+                gifFile = await self.__makeFromVid(makeGif, info, timestamp, duration, filename)
 
             if not gifFile:
                 raise Exception("Could not generate")
@@ -96,12 +101,8 @@ class CommandGif(ICommand):
 
         return bool(re.search(r"(youtube\.com|youtu\.be)/clip/", url))
 
-    async def __makeFromVid(self, makeGif: bool, youtube_url: str, start_time: str, duration: float, filename: Optional[str] = None) -> discord.File:
+    async def __makeFromVid(self, makeGif: bool, info: dict, start_time: str, duration: float, filename: Optional[str] = None) -> discord.File:
         CommandGif.__LOGGING.log(LogLevel.LEVEL_DEBUG, "Media url is a video.")
-        info = await asyncio.to_thread(self.__extractVideoInfo, youtube_url)
-
-        if info.get("is_live") or info.get("live_status") == "is_live":
-            raise ValueError("Livestream URLs are not supported. Use a normal video.")
 
         fmt = self.__pickVideoFormat(info)
         media_url = fmt["url"]
@@ -115,15 +116,10 @@ class CommandGif(ICommand):
         out_name = filename or f"{safe_title}.{'gif' if makeGif else 'mp4'}"
         return discord.File(io.BytesIO(fileBytes), filename=out_name)
 
-    async def __makeFromClip(self, makeGif: bool, clip_url: str, filename: Optional[str] = None) -> discord.File:
+    async def __makeFromClip(self, makeGif: bool, info: dict, filename: Optional[str] = None) -> discord.File:
         CommandGif.__LOGGING.log(LogLevel.LEVEL_DEBUG, "Media url is a clip.")
-        info = await asyncio.to_thread(self.__extractVideoInfo, clip_url)
-
-        if info.get("is_live") or info.get("live_status") == "is_live":
-            raise ValueError("Active livestream clip URLs are not supported.")
 
         start_time, duration = self.__extractClipRange(info)
-
         if duration <= 0:
             raise ValueError("Could not determine clip duration from the YouTube clip URL.")
         if duration > CommandGif.__MAX_DURATION:
