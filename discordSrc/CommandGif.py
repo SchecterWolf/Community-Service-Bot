@@ -72,12 +72,12 @@ class CommandGif(ICommand):
 
         CommandGif.__LOGGING.log(LogLevel.LEVEL_DEBUG, f"Make GIF command called by user {interaction.user.display_name}")
 
+        await interaction.response.defer(thinking=True)
         info = await asyncio.to_thread(self.__extractVideoInfo, url)
         if info.get("is_live") or info.get("live_status") == "is_live":
-            await interaction.response.send_message(f"\U0000274C You must wait for the livestream to end in order to use this command (because youtube is weird like that)!")
+            await interaction.followup.send(f"\U0000274C You must wait for the livestream to end in order to use this command (because youtube is weird like that)!")
             return
 
-        await interaction.response.defer(thinking=True)
         filename = interaction.user.name + ''.join(random.choices(string.digits, k=8)) + f".{'gif' if makeGif else 'mp4'}"
 
         try:
@@ -173,49 +173,110 @@ class CommandGif(ICommand):
                 return info
             raise RuntimeError("Could not find a usable video format")
 
-        # Prefer MP4 if available
-        mp4_formats = [f for f in video_formats if f.get("ext") == "mp4"]
-        candidates = mp4_formats or video_formats
+        def url_of(f: dict) -> str:
+            return str(f.get("url") or "")
+
+        def manifest_url_of(f: dict) -> str:
+            return str(f.get("manifest_url") or "")
+
+        def protocol_of(f: dict) -> str:
+            return str(f.get("protocol") or "")
+
+        def is_dash_manifest(f: dict) -> bool:
+            url = url_of(f)
+            manifest_url = manifest_url_of(f)
+            protocol = protocol_of(f)
+
+            return (
+                "http_dash_segments" in protocol
+                or "/api/manifest/dash/" in url
+                or "/api/manifest/dash/" in manifest_url
+            )
+
+        def is_hls_playlist(f: dict) -> bool:
+            url = url_of(f)
+            manifest_url = manifest_url_of(f)
+            protocol = protocol_of(f)
+
+            return (
+                protocol in ("m3u8", "m3u8_native")
+                or "m3u8" in protocol
+                or "/api/manifest/hls_playlist/" in url
+                or "/api/manifest/hls_playlist/" in manifest_url
+                or url.endswith(".m3u8")
+                or manifest_url.endswith(".m3u8")
+            )
+
+        def is_direct_media(f: dict) -> bool:
+            url = url_of(f)
+            protocol = protocol_of(f)
+
+            # direct-ish playable media URLs; not a YouTube manifest wrapper
+            return (
+                not is_dash_manifest(f)
+                and not is_hls_playlist(f)
+                and protocol not in ("http_dash_segments",)
+                and "/api/manifest/" not in url
+            )
 
         def height(f: dict) -> int:
             return int(f.get("height") or 0)
 
+        def tbr(f: dict) -> int:
+            return int(f.get("tbr") or 0)
+
+        def fps(f: dict) -> int:
+            return int(f.get("fps") or 0)
+
         def quality_score(f: dict) -> tuple[int, int]:
-            return (
-                int(f.get("tbr") or 0),
-                int(f.get("fps") or 0),
-            )
+            return (tbr(f), fps(f))
 
-        # 1. Exact 720p match
-        exact_720 = [f for f in candidates if height(f) == CommandGif.__WIDTH_MP4]
-        if exact_720:
-            return max(exact_720, key=quality_score)
+        def pick_by_resolution(candidates: list[dict]) -> dict:
+            exact_720 = [f for f in candidates if height(f) == CommandGif.__WIDTH_MP4]
+            if exact_720:
+                return max(exact_720, key=quality_score)
 
-        # 2. Next highest above 720
-        above_720 = [f for f in candidates if height(f) > CommandGif.__WIDTH_MP4]
-        if above_720:
-            return min(
-                above_720,
-                key=lambda f: (
-                    height(f),                 # smallest above 720
-                    -int(f.get("tbr") or 0),   # prefer higher bitrate
-                    -int(f.get("fps") or 0),
-                ),
-            )
+            above_720 = [f for f in candidates if height(f) > CommandGif.__WIDTH_MP4]
+            if above_720:
+                return min(
+                    above_720,
+                    key=lambda f: (
+                        height(f),
+                        -tbr(f),
+                        -fps(f),
+                    ),
+                )
 
-        # 3. Best below 720
-        below_720 = [f for f in candidates if height(f) < CommandGif.__WIDTH_MP4]
-        if below_720:
-            return max(
-                below_720,
-                key=lambda f: (
-                    height(f),                # highest available
-                    int(f.get("tbr") or 0),
-                    int(f.get("fps") or 0),
-                ),
-            )
+            below_720 = [f for f in candidates if height(f) < CommandGif.__WIDTH_MP4]
+            if below_720:
+                return max(
+                    below_720,
+                    key=lambda f: (
+                        height(f),
+                        tbr(f),
+                        fps(f),
+                    ),
+                )
 
-        raise RuntimeError("Could not find a usable video format")
+            raise RuntimeError("Could not find a usable video format")
+
+        # Tier 1: direct media URLs
+        direct_candidates = [f for f in video_formats if is_direct_media(f)]
+        if direct_candidates:
+            return pick_by_resolution(direct_candidates)
+
+        # Tier 2: HLS playlists
+        hls_candidates = [f for f in video_formats if is_hls_playlist(f)]
+        if hls_candidates:
+            return pick_by_resolution(hls_candidates)
+
+        # Tier 3: anything except DASH manifests
+        non_dash_candidates = [f for f in video_formats if not is_dash_manifest(f)]
+        if non_dash_candidates:
+            return pick_by_resolution(non_dash_candidates)
+
+        # Last resort: everything
+        return pick_by_resolution(video_formats)
 
     def __extractClipRange(self, info: dict) -> tuple[float, float]:
         start = info.get("start_time")
@@ -254,12 +315,7 @@ class CommandGif(ICommand):
 
             base_filter = (
                 f"fps={CommandGif.__MAX_FPS},"
-                #f"zscale=w={CommandGif.__WIDTH}:h=-1:f=spline36,"
-                #f"scale={CommandGif.__WIDTH}:-1:flags=spline+accurate_rnd+full_chroma_int,"
-                #f"scale={CommandGif.__WIDTH}:-1:flags=spline,"
-                f"scale={CommandGif.__WIDTH}:-1:flags=lanczos,"
-                #f"unsharp=5:5:0.7:3:3:0.3"
-                f"unsharp=5:5:0.8:3:3:0.4"
+                f"scale={CommandGif.__WIDTH}:-2:flags=lanczos"
             )
 
             palette_cmd = [
@@ -286,20 +342,24 @@ class CommandGif(ICommand):
                 gif_path,
             ]
 
-            await asyncio.to_thread(
+            result = await asyncio.to_thread(
                 subprocess.run,
                 palette_cmd,
-                check=True,
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,
+                capture_output=True,
+                text=True,
             )
-            await asyncio.to_thread(
+            if result.returncode != 0:
+                raise RuntimeError("Video is unavailable, try again later")
+
+            result = await asyncio.to_thread(
                 subprocess.run,
                 gif_cmd,
                 check=True,
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,
+                capture_output=True,
+                text=True,
             )
+            if result.returncode != 0:
+                raise RuntimeError("Video is unavailable, try again later")
 
             with open(gif_path, "rb") as f:
                 return f.read()
