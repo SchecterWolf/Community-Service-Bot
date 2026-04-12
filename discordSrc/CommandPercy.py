@@ -51,7 +51,7 @@ class CommandPercy(ICommand):
         prompt = """
 Come up with ONE darkly funny, savage sentence that clearly blames a person named Percy for something.
 
-The sentence does NOT have to start with “it’s Percy’s fault,” but the overall message must clearly imply that Percy is responsible.
+The sentence may or may not start with “it’s Percy’s fault,” but the overall message must clearly imply that Percy is responsible.
 
 The humor should have a dark, cynical, or slightly unhinged tone. It can include adult themes (dating disasters, bad decisions, awkward tension, nightlife, etc.), common life annoyances, petty frustrations, or chaotic scenarios like GTA FiveM RP situations.
 

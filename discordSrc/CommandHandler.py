@@ -9,12 +9,14 @@ __email__ = "--"
 import discord
 
 from .CommsPropertiesModal import CommsPropertiesModal
+from .GuildStore import GuildStore
 from .ICommand import ICommand
 
 from config.ClassLogger import ClassLogger, LogLevel
 from config.Config import Config
 
 from core.Community import Community
+from core.DB import DB
 
 from discord import Interaction, Member
 from discord.app_commands import CommandTree
@@ -79,6 +81,8 @@ class CommandHandler(ICommand):
         # Error check
         if not await verifyIsJailmod(interaction):
             pass
+        elif not member:
+            await interaction.response.send_message("Could not locate member for some reason....", ephemeral=True)
         elif member.bot:
             await interaction.response.send_message("Cannot give community service to a bot!", ephemeral=True)
         elif not bailiff:
@@ -126,13 +130,22 @@ class CommandHandler(ICommand):
 
         # Force finish the user's game
         if game:
+            await interaction.response.send_message(f"Releasing user \"{member.name}\" from comms.")
             await game._finish()
             Community().removeServiceGame(interaction.guild_id or 0, userID)
-        # Notify the user isn't serving comms
+        # Try from the DB
         else:
-            logStr = f"User \"{member.display_name}\" is currently not service community service."
-            CommandHandler.__LOGGER.log(LogLevel.LEVEL_DEBUG, logStr)
-            await interaction.response.send_message(logStr)
+            db = DB(member.guild.id)
+            inmate = db.getInmate(userID)
+            bailiff = GuildStore().getBailiff(member.guild.id)
+
+            if inmate and bailiff:
+                await bailiff.releaseInmate(inmate, member.name)
+            # Notify the user isn't serving comms
+            else:
+                logStr = f"User \"{member.display_name}\" is currently not service community service."
+                CommandHandler.__LOGGER.log(LogLevel.LEVEL_DEBUG, logStr)
+                await interaction.response.send_message(logStr)
 
     async def getHelp(self, interaction: Interaction):
         game = Community().getServiceGame(interaction.guild_id or 0, interaction.user.id)

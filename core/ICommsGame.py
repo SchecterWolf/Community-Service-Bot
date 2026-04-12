@@ -45,7 +45,7 @@ class ICommsGame(ABC):
         await self.bailiff.speakToInmate(self.reason)
 
     async def _finish(self):
-        infoStr = f"User \"{self.name}\" has finished counting, and is being released!"
+        infoStr = f"User \"{self.name}\" has finished community service, and is being released!"
         ICommsGame.__LOGGER.log(LogLevel.LEVEL_INFO, infoStr)
         await self.bailiff.speakToInmate(infoStr)
         await self.bailiff.releaseInmate(self.inmate, self.name)
