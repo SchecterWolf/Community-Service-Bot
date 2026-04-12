@@ -57,9 +57,15 @@ class DiscordBailiff(Bailiff):
             if not role:
                 return Result(errorStr=f"Role ({roleID}) could not be located. Aborting for safety.")
 
+        # Check for the special booster role
+        commsRoles=[self.commsRole]
+        for role in member.roles:
+            if role.is_premium_subscriber():
+                commsRoles.append(role)
+
         # Re-assign the roles
         try:
-            await member.edit(roles=[self.commsRole])
+            await member.edit(roles=commsRoles)
             pass
         except discord.Forbidden:
             return Result(errorStr=f"User \"{name}\" is too powerfull, I cannot change their roles.")
@@ -95,15 +101,19 @@ class DiscordBailiff(Bailiff):
                 userRoles.append(role)
 
         # Assign the user all of their former roles
+        removeFromDB = True
         try:
             DiscordBailiff.__LOGGER.log(LogLevel.LEVEL_DEBUG, f"Assigning user \"{name}\"({inmate.userid}) their former roles: {userRoles}")
             await member.edit(roles=userRoles)
             pass
-        except:
-            pass
+        except Exception as e:
+            DiscordBailiff.__LOGGER.log(LogLevel.LEVEL_CRIT, f"Role assignment error: {e}")
+            DiscordBailiff.__LOGGER.log(LogLevel.LEVEL_CRIT, f"Could not assign user back their roles of: {userRoles}")
+            removeFromDB = False
 
         # Remove inmate from DB
-        self.DB.deleteInmate(inmate.userid)
+        if removeFromDB:
+            self.DB.deleteInmate(inmate.userid)
 
     async def speakToInmate(self, data: Any):
         if isinstance(data, str):

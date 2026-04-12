@@ -50,7 +50,7 @@ class CommsPropertiesModal(discord.ui.Modal):
 
     @require_jailmod
     async def on_submit(self, interaction: discord.Interaction):
-        CommsPropertiesModal.__LOGGER.log(LogLevel.LEVEL_INFO, f"Mod \"{interaction.user.display_name}\" is sending \"{self.user.global_name}\" to community service!")
+        CommsPropertiesModal.__LOGGER.log(LogLevel.LEVEL_INFO, f"Mod \"{interaction.user.display_name}\" is sending \"{self.user.display_name}\" to community service!")
 
         # Error check
         if not int(cast(discord.ui.TextInput, self.numRoundsInput.component).value):
@@ -91,7 +91,7 @@ class CommsPropertiesModal(discord.ui.Modal):
         if serviceGame and res.result:
             Community().addServiceGame(serviceGame)
         else:
-            await self.bailiff.speakToInmate(f"Lucky you, we had a problem setting up the community service. You will be released!")
+            await self.bailiff.speakToInmate(f"We had a problem setting up the community service. User will be released!")
             await self.bailiff.releaseInmate(inmate, self.user.display_name)
 
         if res.result:
