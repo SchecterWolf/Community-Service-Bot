@@ -140,6 +140,7 @@ class CommandHandler(ICommand):
             bailiff = GuildStore().getBailiff(member.guild.id)
 
             if inmate and bailiff:
+                await interaction.response.send_message(f"Releasing user \"{member.name}\" from comms.")
                 await bailiff.releaseInmate(inmate, member.name)
             # Notify the user isn't serving comms
             else:
