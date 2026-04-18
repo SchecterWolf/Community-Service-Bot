@@ -12,7 +12,7 @@ from pathlib import Path
 from config.ClassLogger import ClassLogger, LogLevel
 from config.Globals import GLOBALVARS
 
-_VERSION = "0.3.2"
+_VERSION = "0.4.0"
 
 class Version:
     __LOGGER = ClassLogger(__name__)
@@ -21,7 +21,7 @@ class Version:
         self.repo = Path(GLOBALVARS.PROJ_ROOT)
 
     def getFullVersion(self) -> str:
-        return f"v{_VERSION} - {self.getHash()}"
+        return f"v{_VERSION} - {self.getHash()}\n{self.getCommitTitle()}"
 
     def getHash(self) -> str:
         ret = "0000000"
@@ -40,6 +40,26 @@ class Version:
             ret = result.stdout.strip()
         except Exception as e:
             Version.__LOGGER.log(LogLevel.LEVEL_CRIT, str(e))
+
+        return ret
+
+    def getCommitTitle(self) -> str:
+        ret = "--"
+        if not self.repo.exists():
+            Version.__LOGGER.log(LogLevel.LEVEL_ERROR, f"Error locating project root dir.")
+            return ret
+
+        try:
+            result = subprocess.run(
+                ["git", "log", "-1", "--pretty=%s"],
+                cwd=self.repo,
+                capture_output=True,
+                text=True,
+                check=True
+            )
+            ret = result.stdout.strip()
+        except Exception as e:
+            Version.__LOGGER.log(LogLevel.LEVEL_ERROR, str(e))
 
         return ret
 
