@@ -12,6 +12,7 @@ from .DiscordBailiff import DiscordBailiff
 from .CommandGif import CommandGif
 from .CommandHandler import CommandHandler
 from .CommandPercy import CommandPercy
+from .CommandSummarize import CommandSummarize
 from .GuildStore import GuildStore
 from .ICommand import ICommand
 from .MoveMessage import MoveMessage
@@ -57,6 +58,7 @@ class Bot(Client):
             MoveMessage(self),
             CommandPercy(),
             CommandGif(),
+            CommandSummarize(),
         ]
 
     def runBot(self):

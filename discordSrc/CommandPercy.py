@@ -9,24 +9,25 @@ __email__ = ""
 import discord
 
 from openai import OpenAI
+from typing import Optional
 
 from .ICommand import ICommand
 
 from config.ClassLogger import ClassLogger, LogLevel
 from config.Globals import GLOBALVARS
 from core.DB import DB
-
-from typing import Optional
+from core.AIClient import AIClient
 
 class CommandPercy(ICommand):
     __LOGGER = ClassLogger(__name__)
+    __MODEL = "gpt-4o-mini"
 
-    def __init__(self, model: str = "gpt-4o-mini"):
+    def __init__(self):
         super().__init__()
 
         self.client: Optional[OpenAI] = None
-        self.model = model
-        self.db = DB(0)
+        self.model = CommandPercy.__MODEL
+        self.allowedGuild = DB(0).getConfigAttr(GLOBALVARS.CONFIG_PERCY, int, 0)
 
         self.command = discord.app_commands.Command(
             name="percy",
@@ -38,11 +39,7 @@ class CommandPercy(ICommand):
     def setupCommands(self, tree: discord.app_commands.CommandTree):
         CommandPercy.__LOGGER.log(LogLevel.LEVEL_DEBUG, "Initializing the percy command.")
 
-        # Create the open AI client
-        token = ""
-        with open(f"{GLOBALVARS.FILE_OPENAI_TOKEN}") as file:
-            token = file.readline().strip()
-        self.client = OpenAI(api_key=token)
+        self.client = AIClient().getClient()
 
         # Add the command to the tree
         tree.add_command(self.command)
@@ -86,9 +83,11 @@ Examples:
     @discord.app_commands.checks.cooldown(5, 60.0, key=lambda i: "global")
     @discord.app_commands.describe(style="(Optional) Style suggestion for the AI generation")
     async def generate(self, interaction: discord.Interaction, style: str | None = None):
-        if interaction.guild_id != self.db.getConfigAttr(GLOBALVARS.CONFIG_PERCY, int, 0):
+        if interaction.guild_id != self.allowedGuild:
             await interaction.response.send_message("This command is not available for this server.", ephemeral=True)
             return
+
+        CommandPercy.__LOGGER.log(LogLevel.LEVEL_DEBUG, f"User {interaction.user.name} called the blame percy command.")
 
         prompt = self._build_prompt(style)
         response = ""
