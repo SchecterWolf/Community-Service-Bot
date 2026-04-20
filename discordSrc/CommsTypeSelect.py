@@ -18,7 +18,7 @@ class CommsTypeSelect(discord.ui.Select):
                 discord.SelectOption(label=commType.label, value=str(commType))
             )
 
-        super().__init__(options=options, min_values=1)
+        super().__init__(options=options, min_values=1, max_values=1)
 
     def getType(self) -> CommType:
         ret = CommType.COUNT
