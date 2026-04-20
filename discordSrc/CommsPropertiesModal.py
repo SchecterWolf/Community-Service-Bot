@@ -38,7 +38,7 @@ class CommsPropertiesModal(discord.ui.Modal):
 
     reasonInput = discord.ui.Label(
         text="Reason",
-        component=discord.ui.TextInput(style=discord.TextStyle.paragraph, placeholder="(optional)")
+        component=discord.ui.TextInput(style=discord.TextStyle.paragraph, placeholder="(optional)", required=False)
     )
 
     def __init__(self, user: discord.Member, bailiff: DiscordBailiff):
@@ -82,9 +82,9 @@ class CommsPropertiesModal(discord.ui.Modal):
             CommsPropertiesModal.__LOGGER.log(LogLevel.LEVEL_DEBUG, res.errorStr)
             await interaction.followup.send(res.errorStr)
         else:
-            reason = f"Greetings {self.user.mention}! You have been given community service" \
-                + f" for the following reason: {reason}" if reason else "!"
-            serviceGame = CommsServiceFactory.createServiceGame(self.user.display_name, inmate, self.bailiff, reason)
+            greeting = f"Greetings {self.user.mention}! You have been given community service"
+            greeting += f" for the following reason:\n\n{reason}" if reason else "!"
+            serviceGame = CommsServiceFactory.createServiceGame(self.user.display_name, inmate, self.bailiff, greeting)
             res = await serviceGame.start()
 
         # Add the game to the community if successfull, otherwise release the user
