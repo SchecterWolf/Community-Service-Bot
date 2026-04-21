@@ -17,9 +17,8 @@ from config.ClassLogger import ClassLogger, LogLevel
 class MoveMessage(discord.app_commands.ContextMenu, ICommand):
     __LOGGER = ClassLogger(__name__)
 
-    def __init__(self, bot: discord.Client):
+    def __init__(self):
         super().__init__(name="Move Message", callback=self.callback, type=discord.AppCommandType.message)
-        self.bot = bot
 
     def setupCommands(self, tree: discord.app_commands.CommandTree):
         MoveMessage.__LOGGER.log(LogLevel.LEVEL_DEBUG, "Initializing the move message command.")
@@ -28,9 +27,6 @@ class MoveMessage(discord.app_commands.ContextMenu, ICommand):
     async def callback(self, interaction: discord.Interaction, message: discord.Message):
         MoveMessage.__LOGGER.log(LogLevel.LEVEL_DEBUG, f"Move message command invoked by user \"{interaction.user.display_name}\"")
         if not await verifyIsJailmod(interaction):
-            return
-        elif not interaction.guild:
-            MoveMessage.__LOGGER.log(LogLevel.LEVEL_ERROR, f"Move message interaction received an empty guild.")
             return
 
         try:
@@ -47,10 +43,23 @@ class MoveMessage(discord.app_commands.ContextMenu, ICommand):
             if selected is None:
                 await interaction.followup.send("No channel selected.", ephemeral=True)
                 return
-            targetChannel = interaction.guild.get_channel(selected.id)
+
+            # Move the message
+            await self.moveSingleMessage(interaction, selected.id, message, True)
+
+        except TimeoutError:
+            await interaction.followup.send("Timed out waiting for channel mention.", ephemeral=True)
+
+    async def moveSingleMessage(self, interaction: discord.Interaction, channelID: int, message: discord.Message, mention):
+        if not interaction.guild:
+            MoveMessage.__LOGGER.log(LogLevel.LEVEL_ERROR, f"Move message interaction received an empty guild.")
+            return
+
+        try:
+            targetChannel = interaction.guild.get_channel(channelID)
             if targetChannel is None:
                 try:
-                    targetChannel = await interaction.guild.fetch_channel(selected.id)
+                    targetChannel = await interaction.guild.fetch_channel(channelID)
                 except Exception:
                     targetChannel = None
             if not isinstance(targetChannel, discord.TextChannel):
@@ -118,16 +127,18 @@ class MoveMessage(discord.app_commands.ContextMenu, ICommand):
 
             movedEmbed.timestamp = message.created_at
 
-            MoveMessage.__LOGGER.log(LogLevel.LEVEL_INFO, f"Message ID \"{message.id}\" was moved to channel {targetChannel.name}.")
-            await targetChannel.send(embed=movedEmbed, files=files if files else [], allowed_mentions=discord.AllowedMentions.none())
+            # Send the "moved" message as a new message and delete the former
+            if mention:
+                await targetChannel.send(content=f"Mesage moved {message.author.mention}", embed=movedEmbed, files=files if files else [])
+            else:
+                await targetChannel.send(embed=movedEmbed, files=files if files else [], allowed_mentions=discord.AllowedMentions.none())
             await message.delete()
+            MoveMessage.__LOGGER.log(LogLevel.LEVEL_INFO, f"Message ID \"{message.id}\" was moved to channel {targetChannel.name}.")
 
-            await interaction.followup.send("Message moved!", ephemeral=True)
-
-        except TimeoutError:
-            await interaction.followup.send("Timed out waiting for channel mention.", ephemeral=True)
+            if mention:
+                await interaction.followup.send("Message moved!", ephemeral=True)
 
         except Exception as e:
             MoveMessage.__LOGGER.log(LogLevel.LEVEL_ERROR, f"Move message failed: {e}")
-            #await interaction.followup.send(f"Error: {e}", ephemeral=True)
+            await interaction.followup.send(f"Error: {e}", ephemeral=True)
 
