@@ -17,6 +17,7 @@ from .CommandSummarize import CommandSummarize
 from .GuildStore import GuildStore
 from .ICommand import ICommand
 from .MoveMessage import MoveMessage
+from .MoveMessageBulk import MoveMessageBulk
 
 from config.ClassLogger import ClassLogger, LogLevel
 from config.Config import Config
@@ -55,12 +56,13 @@ class Bot(Client):
         self.commsChannels: List[int] = []
         self.printVersion = False
         self.commands: List[ICommand] = [
-            CommandHandler(),
-            MoveMessage(self),
-            CommandPercy(),
             CommandGif(),
-            CommandSummarize(),
+            CommandHandler(),
             CommandMisc(),
+            CommandPercy(),
+            CommandSummarize(),
+            MoveMessage(),
+            MoveMessageBulk(),
         ]
 
     def runBot(self):
