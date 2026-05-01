@@ -29,9 +29,11 @@ class CommandGif(ICommand):
     __FFMPEG = "ffmpeg"
     __DEFAULT_DURATION = 5.0
     __MAX_DURATION = 15.0
+    __MAX_DURATION_VID = 600 # Max 10 minute vid
     __MAX_FPS = 12
     __WIDTH = 360
     __WIDTH_MP4 = 720
+    __WIDTH_MP4_LOW = 480
 
     def __init__(self):
         super().__init__()
@@ -60,14 +62,28 @@ class CommandGif(ICommand):
     async def makeGif(self, interaction: discord.Interaction, url: str, timestamp: str = "0", duration: float = __DEFAULT_DURATION):
         return await self.makeMedia(True, interaction, url, timestamp, duration)
 
-    async def makeVid(self, interaction: discord.Interaction, url: str, timestamp: str = "0", duration: float = __DEFAULT_DURATION):
-        return await self.makeMedia(False, interaction, url, timestamp, duration)
+    @discord.app_commands.describe(url="Youtube URL clip")
+    @discord.app_commands.describe(start_timestamp="Starting timestamp [format SS, MM:SS, HH:MM:SS]")
+    @discord.app_commands.describe(end_timestamp="Ending timestamp [format SS, MM:SS, HH:MM:SS]")
+    async def makeVid(self, interaction: discord.Interaction, url: str, start_timestamp: str = "0", end_timestamp: str = "0"):
+        start_sec = self._parse_time_to_seconds(start_timestamp)
+        end_sec = self._parse_time_to_seconds(end_timestamp)
+
+        # Validate times
+        if end_sec <= start_sec or end_sec - start_sec == 0:
+            await interaction.response.send_message("\U0000274C end_timestamp must be greater than timestamp!")
+            return
+
+        return await self.makeMedia(False, interaction, url, start_timestamp, end_sec - start_sec)
 
     async def makeMedia(self, makeGif: bool, interaction: discord.Interaction, url: str, timestamp: str = "0", duration: float = __DEFAULT_DURATION):
         if not await verifyIsListRoles(interaction, "SeniorRoles", "\U0000274C You're not a high enough rank to use this feature."):
             return
-        elif duration < 0 or duration > CommandGif.__MAX_DURATION:
+        elif makeGif and (duration < 0 or duration > CommandGif.__MAX_DURATION):
             await interaction.response.send_message(f"\U0000274C duration can't be longer than {CommandGif.__MAX_DURATION} seconds!")
+            return
+        elif not makeGif and duration > CommandGif.__MAX_DURATION_VID:
+            await interaction.response.send_message(f"\U0000274C duration can't be longer than {CommandGif.__MAX_DURATION_VID} seconds!")
             return
 
         CommandGif.__LOGGING.log(LogLevel.LEVEL_DEBUG, f"Make GIF command called by user {interaction.user.display_name}")
@@ -93,7 +109,8 @@ class CommandGif(ICommand):
 
         except Exception as e:
             CommandGif.__LOGGING.log(LogLevel.LEVEL_ERROR, f"GIF command failed: {str(e)}")
-            await interaction.followup.send(f"Failed to generate GIF: {str(e)}")
+            mediaType = "GIF" if makeGif else "MP4"
+            await interaction.followup.send(f"Failed to generate {mediaType}: {str(e)}")
 
     def __isClip(self, url: str) -> bool:
         if not isinstance(url, str):
@@ -104,13 +121,17 @@ class CommandGif(ICommand):
     async def __makeFromVid(self, makeGif: bool, info: dict, start_time: str, duration: float, filename: Optional[str] = None) -> discord.File:
         CommandGif.__LOGGING.log(LogLevel.LEVEL_DEBUG, "Media url is a video.")
 
-        fmt = self.__pickVideoFormat(info)
+        fmt = self.__pickVideoFormat(info, duration)
         media_url = fmt["url"]
         startSeconds = self._parse_time_to_seconds(start_time)
         if makeGif:
             fileBytes = await self.__renderGifBytes(media_url, startSeconds, duration)
         else:
-            fileBytes = await self.__renderMp4Bytes(media_url, startSeconds, duration)
+            audio_fmt = self.__pickAudioFormat(info)
+            audio_url = audio_fmt["url"] if audio_fmt else None
+            fileBytes = await self.__renderMp4Bytes(media_url, startSeconds, duration, audio_url)
+            sizeMB = len(fileBytes) / (1024 * 1024)
+            CommandGif.__LOGGING.log(LogLevel.LEVEL_DEBUG, f"Generated MP4 size: {sizeMB:.2f} MB")
 
         safe_title = self.__sanitizeFilename(info.get("title") or "clip")
         out_name = filename or f"{safe_title}.{'gif' if makeGif else 'mp4'}"
@@ -133,7 +154,9 @@ class CommandGif(ICommand):
         if makeGif:
             fileBytes = await self.__renderGifBytes(media_url, start_time, duration)
         else:
-            fileBytes = await self.__renderMp4Bytes(media_url, start_time, duration)
+            audio_fmt = self.__pickAudioFormat(info)
+            audio_url = audio_fmt["url"] if audio_fmt else None
+            fileBytes = await self.__renderMp4Bytes(media_url, start_time, duration, audio_url)
 
         clip_title = (
             info.get("clip_title")
@@ -160,8 +183,11 @@ class CommandGif(ICommand):
                 raise ValueError("Extracted youtube info was the incorrect format.")
             return ret
 
-    def __pickVideoFormat(self, info: dict) -> dict:
+    def __pickVideoFormat(self, info: dict, duration: float = 0.0) -> dict:
         formats = info.get("formats") or []
+        suggestedResolution = CommandGif.__WIDTH_MP4 if duration < 300.0 else CommandGif.__WIDTH_MP4_LOW
+
+        CommandGif.__LOGGING.log(LogLevel.LEVEL_DEBUG, f"Using resolution: {suggestedResolution}")
 
         video_formats = [
             f for f in formats
@@ -232,11 +258,11 @@ class CommandGif(ICommand):
             return (tbr(f), fps(f))
 
         def pick_by_resolution(candidates: list[dict]) -> dict:
-            exact_720 = [f for f in candidates if height(f) == CommandGif.__WIDTH_MP4]
+            exact_720 = [f for f in candidates if height(f) == suggestedResolution]
             if exact_720:
                 return max(exact_720, key=quality_score)
 
-            above_720 = [f for f in candidates if height(f) > CommandGif.__WIDTH_MP4]
+            above_720 = [f for f in candidates if height(f) > suggestedResolution]
             if above_720:
                 return min(
                     above_720,
@@ -247,7 +273,7 @@ class CommandGif(ICommand):
                     ),
                 )
 
-            below_720 = [f for f in candidates if height(f) < CommandGif.__WIDTH_MP4]
+            below_720 = [f for f in candidates if height(f) < suggestedResolution]
             if below_720:
                 return max(
                     below_720,
@@ -364,20 +390,9 @@ class CommandGif(ICommand):
             with open(gif_path, "rb") as f:
                 return f.read()
 
-    async def __renderMp4Bytes(
-        self,
-        media_url: str,
-        start_time: float,
-        duration: float,
-    ) -> bytes:
+    async def __renderMp4Bytes(self, media_url: str, start_time: float, duration: float, audio_url: Optional[str] = None) -> bytes:
         with tempfile.TemporaryDirectory() as tmp:
             mp4_path = f"{tmp}/out.mp4"
-
-            video_filter = (
-                f"fps={CommandGif.__MAX_FPS},"
-                f"scale={CommandGif.__WIDTH_MP4}:-2:flags=spline+accurate_rnd+full_chroma_int,"
-                f"unsharp=5:5:0.4:3:3:0.2"
-            )
 
             mp4_cmd = [
                 CommandGif.__FFMPEG,
@@ -385,16 +400,36 @@ class CommandGif(ICommand):
                 "-ss", str(start_time),
                 "-t", str(duration),
                 "-i", media_url,
-                "-vf", video_filter,
-                "-an",
-                "-c:v", "libx264",
-                "-preset", "medium",
-                "-crf", "23",
-                "-pix_fmt", "yuv420p",
-                "-movflags", "+faststart",
-                mp4_path,
             ]
 
+            if audio_url:
+                mp4_cmd.extend([
+                    "-ss", str(start_time),
+                    "-t", str(duration),
+                    "-i", audio_url,
+                ])
+
+            mp4_cmd.extend([
+                "-c:v", "copy",
+            ])
+
+            if audio_url:
+                mp4_cmd.extend([
+                    "-map", "0:v:0",
+                    "-map", "1:a:0",
+                    "-c:a", "aac",
+                    "-b:a", "128k",
+                    "-shortest",
+                ])
+            else:
+                mp4_cmd.append("-an")
+
+            mp4_cmd.extend([
+                "-movflags", "+faststart",
+                mp4_path,
+            ])
+
+            CommandGif.__LOGGING.log(LogLevel.LEVEL_DEBUG, f"Running download command: {mp4_cmd}")
             await asyncio.to_thread(
                 subprocess.run,
                 mp4_cmd,
@@ -402,6 +437,7 @@ class CommandGif(ICommand):
                 stdout=subprocess.DEVNULL,
                 stderr=subprocess.DEVNULL,
             )
+            CommandGif.__LOGGING.log(LogLevel.LEVEL_DEBUG, "Download complete.")
 
             with open(mp4_path, "rb") as f:
                 return f.read()
@@ -448,4 +484,34 @@ class CommandGif(ICommand):
         raise ValueError(
             "Invalid time format. Use 'SS', 'MM:SS', or 'HH:MM:SS'"
         )
+
+    def __pickAudioFormat(self, info: dict) -> Optional[dict]:
+        formats = info.get("formats") or []
+
+        audio_formats = [
+            f for f in formats
+            if f.get("acodec") not in (None, "none") and f.get("url")
+        ]
+
+        if not audio_formats:
+            if info.get("url") and info.get("acodec") not in (None, "none"):
+                return info
+            return None
+
+        def abr(f: dict) -> float:
+            return float(f.get("abr") or 0)
+
+        def is_direct_audio(f: dict) -> bool:
+            protocol = str(f.get("protocol") or "")
+            url = str(f.get("url") or "")
+            return (
+                "http_dash_segments" not in protocol
+                and "/api/manifest/" not in url
+            )
+
+        direct = [f for f in audio_formats if is_direct_audio(f)]
+        if direct:
+            return max(direct, key=abr)
+
+        return max(audio_formats, key=abr)
 

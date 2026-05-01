@@ -129,7 +129,7 @@ class MoveMessage(discord.app_commands.ContextMenu, ICommand):
 
             # Send the "moved" message as a new message and delete the former
             if mention:
-                await targetChannel.send(content=f"Mesage moved {message.author.mention}", embed=movedEmbed, files=files if files else [])
+                await targetChannel.send(content=f"Message moved {message.author.mention}", embed=movedEmbed, files=files if files else [])
             else:
                 await targetChannel.send(embed=movedEmbed, files=files if files else [], allowed_mentions=discord.AllowedMentions.none())
             await message.delete()

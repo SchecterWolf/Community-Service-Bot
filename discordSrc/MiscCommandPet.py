@@ -37,7 +37,7 @@ class MiscCommandPet(discord.ui.Modal, IMiscCommand):
     __LOGGER = ClassLogger(__name__)
     __TITLE = "Give Pets Command"
     __MAX_DISPLAY_USERS = 10
-    __ACTIVE_TIME_SEC = 300
+    __ACTIVE_TIME_SEC = 1200 # 20 minutes
     __POLLING_SEC = 30
 
     subTitle = discord.ui.TextDisplay(content="Give someone pets!")
@@ -115,6 +115,7 @@ class MiscCommandPet(discord.ui.Modal, IMiscCommand):
     async def actionClicked(self, interaction: discord.Interaction):
         userID = int(interaction.custom_id or "")
         if userID not in self.ongoing:
+            await interaction.response.send_message("Activity has ended.", ephemeral=True)
             return
 
         # Ack
