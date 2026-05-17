@@ -4,3 +4,4 @@ openai
 pytest
 pytest-asyncio
 yt-dlp
+boto3

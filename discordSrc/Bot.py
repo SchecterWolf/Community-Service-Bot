@@ -11,6 +11,7 @@ import discord
 from .DiscordBailiff import DiscordBailiff
 from .CommandGif import CommandGif
 from .CommandHandler import CommandHandler
+from .CommandMinecraft import CommandMinecraft
 from .CommandMisc import CommandMisc
 from .CommandPercy import CommandPercy
 from .CommandSummarize import CommandSummarize
@@ -58,6 +59,7 @@ class Bot(Client):
         self.commands: List[ICommand] = [
             CommandGif(),
             CommandHandler(),
+            CommandMinecraft(),
             CommandMisc(),
             CommandPercy(),
             CommandSummarize(),
